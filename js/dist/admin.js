@@ -1,1 +1,16 @@
-(()=>{var t={n:n=>{var r=n&&n.__esModule?()=>n.default:()=>n;return t.d(r,{a:r}),r},d:(n,r)=>{for(var o in r)t.o(r,o)&&!t.o(n,o)&&Object.defineProperty(n,o,{enumerable:!0,get:r[o]})},o:(t,n)=>Object.prototype.hasOwnProperty.call(t,n),r:t=>{"undefined"!=typeof Symbol&&Symbol.toStringTag&&Object.defineProperty(t,Symbol.toStringTag,{value:"Module"}),Object.defineProperty(t,"__esModule",{value:!0})}},n={};(()=>{"use strict";t.r(n);const r=flarum.core.compat["admin/app"];var o=t.n(r);o().initializers.add("peopleinside-first-post-approval",(function(){o().extensionData.for("peopleinside-first-post-approval").registerSetting({setting:"clarkwinkelmann-first-post-approval.postCount",type:"number",label:o().translator.trans("peopleinside-first-post-approval.admin.settings.postCount"),min:0}).registerSetting({setting:"clarkwinkelmann-first-post-approval.discussionCount",type:"number",label:o().translator.trans("peopleinside-first-post-approval.admin.settings.discussionCount"),min:0}).registerPermission({icon:"fas fa-check",label:o().translator.trans("peopleinside-first-post-approval.admin.permissions.bypass"),permission:"discussion.firstPostWithoutApproval"},"start")}))})(),module.exports=n})();
+flarum.extensions['peopleinside-first-post-approval'] = function() {
+  const app = flarum.core.app;
+  app.initializers.add('peopleinside-first-post-approval', function() {
+    app.extensionData
+      .for('peopleinside-first-post-approval')
+      .registerSetting({
+        setting: 'peopleinside-first-post-approval.approval_type',
+        label: app.translator.trans('peopleinside-first-post-approval.admin.settings.approval_type_label'),
+        type: 'select',
+        options: {
+          'all': app.translator.trans('peopleinside-first-post-approval.admin.settings.all_posts'),
+          'first': app.translator.trans('peopleinside-first-post-approval.admin.settings.first_post_only'),
+        }
+      });
+  });
+};
