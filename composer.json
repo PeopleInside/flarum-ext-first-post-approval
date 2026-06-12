@@ -38,9 +38,6 @@
                 "color": "#fff"
             }
         },
-        "flagrow": {
-            "discuss": "https://discuss.flarum.org/d/25055"
-        }
     },
     "config": {
         "sort-packages": true
