@@ -25,7 +25,7 @@ Alternatively, you can exclude some groups on the permissions page.
 
 Flarum's **Approval** and **Flags** extensions must be enabled.
 
-    composer require clarkwinkelmann/flarum-ext-first-post-approval
+    composer require peopleinside/flarum-ext-first-post-approval
 
 ## Support
 
