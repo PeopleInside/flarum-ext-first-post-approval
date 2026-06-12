@@ -8,5 +8,8 @@
     "scripts": {
         "dev": "webpack --mode development --watch",
         "build": "webpack --mode production"
+    },
+    "devDependencies": {
+        "webpack-cli": "^7.0.3"
     }
 }
