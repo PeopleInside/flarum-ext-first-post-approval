@@ -37,9 +37,9 @@
                 "backgroundColor": "#684ba6",
                 "color": "#fff"
             }
-        },
+        }
     },
     "config": {
         "sort-packages": true
-    },
+    }
 }
