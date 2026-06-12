@@ -1,49 +1,35 @@
 {
     "name": "peopleinside/flarum-ext-first-post-approval",
-    "description": "Hold posts and discussions from new users for approval",
-    "keywords": [
-        "flarum",
-        "approval"
-    ],
+    "description": "Approve first post of users.",
     "type": "flarum-extension",
+    "keywords": ["flarum", "approval"],
     "license": "MIT",
-    "require": {
-        "php": "^8.2",
-        "flarum/core": "^2.0-rc.3"
+    "homepage": "https://github.com/PeopleInside/flarum-ext-first-post-approval",
+    "support": {
+        "source": "https://github.com/PeopleInside/flarum-ext-first-post-approval/issues"
     },
     "authors": [
         {
-            "name": "Clark Winkelmann",
-            "email": "clark.winkelmann@gmail.com",
-            "homepage": "https://clarkwinkelmann.com/",
-            "role": "Developer"
+            "name": "PeopleInside"
         }
     ],
-    "support": {
-        "issues": "https://github.com/PeopleInside/flarum-ext-first-post-approval/issues",
-        "source": "https://github.com/PeopleInside/flarum-ext-first-post-approval",
-        "forum": "https://discuss.flarum.org/d/25055"
+    "require": {
+        "flarum/core": "^1.8.0 || ^2.0.0-rc.1"
+    },
+    "extra": {
+        "flarum-extension": {
+            "title": "First Post Approval",
+            "category": "Security",
+            "icon": {
+                "name": "fas fa-check",
+                "backgroundColor": "#2ecc71",
+                "color": "#fff"
+            }
+        }
     },
     "autoload": {
         "psr-4": {
             "PeopleInside\\FirstPostApproval\\": "src/"
         }
-    },
-    "extra": {
-        "flarum-extension": {
-            "title": "First Post Approval",
-            "category": "moderation",
-            "icon": {
-                "name": "fas fa-check",
-                "backgroundColor": "#684ba6",
-                "color": "#fff"
-            }
-        },
-        "flagrow": {
-            "discuss": "https://discuss.flarum.org/d/25055"
-        }
-    },
-    "config": {
-        "sort-packages": true
     }
 }
