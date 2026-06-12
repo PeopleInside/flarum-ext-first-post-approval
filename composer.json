@@ -8,21 +8,21 @@
     "type": "flarum-extension",
     "license": "MIT",
     "require": {
-        "flarum/approval": "*",
-        "flarum/core": "^1.3"
+        "php": "^8.2",
+        "flarum/core": "^2.0-rc.3"
     },
     "authors": [
         {
             "name": "Clark Winkelmann",
-            "email": "clark.winkelmann@gmail.com",
+            "email": "",
             "homepage": "https://clarkwinkelmann.com/",
             "role": "Developer"
         }
     ],
     "support": {
-        "issues": "https://github.com/clarkwinkelmann/flarum-ext-first-post-approval/issues",
-        "source": "https://github.com/clarkwinkelmann/flarum-ext-first-post-approval",
-        "forum": "https://discuss.flarum.org/d/25055"
+        "issues": "https://github.com/PeopleInside/flarum-ext-first-post-approval/issues",
+        "source": "https://github.com/PeopleInside/flarum-ext-first-post-approval",
+        "forum": ""
     },
     "autoload": {
         "psr-4": {
