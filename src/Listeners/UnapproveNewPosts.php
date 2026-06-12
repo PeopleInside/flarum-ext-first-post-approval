@@ -1,6 +1,6 @@
 <?php
 
-namespace ClarkWinkelmann\FirstPostApproval\Listeners;
+namespace PeopleInside\FirstPostApproval\Listeners;
 
 use Flarum\Flags\Flag;
 use Flarum\Post\Event\Saving;

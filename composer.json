@@ -14,7 +14,7 @@
     "authors": [
         {
             "name": "Clark Winkelmann",
-            "email": "",
+            "email": "clark.winkelmann@gmail.com",
             "homepage": "https://clarkwinkelmann.com/",
             "role": "Developer"
         }
@@ -22,11 +22,11 @@
     "support": {
         "issues": "https://github.com/PeopleInside/flarum-ext-first-post-approval/issues",
         "source": "https://github.com/PeopleInside/flarum-ext-first-post-approval",
-        "forum": ""
+        "forum": "https://discuss.flarum.org/d/25055"
     },
     "autoload": {
         "psr-4": {
-            "peopleinside\\FirstPostApproval\\": "src/"
+            "PeopleInside\\FirstPostApproval\\": "src/"
         }
     },
     "extra": {

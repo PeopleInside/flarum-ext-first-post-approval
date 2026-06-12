@@ -1,4 +1,4 @@
-clarkwinkelmann-first-post-approval:
+peopleinside-first-post-approval:
     admin:
         permissions:
             bypass: Post without first post approval

@@ -1,6 +1,6 @@
 <?php
 
-namespace ClarkWinkelmann\FirstPostApproval;
+namespace PeopleInside\FirstPostApproval;
 
 use Flarum\Approval\Event\PostWasApproved;
 use Flarum\Extend;
