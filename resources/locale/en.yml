@@ -1,4 +1,4 @@
-peopleinside-first-post-approval:
+peopleinside-flarum-ext-first-post-approval:
     admin:
         permissions:
             bypass: Post without first post approval
