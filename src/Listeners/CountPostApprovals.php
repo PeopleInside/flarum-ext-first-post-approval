@@ -20,11 +20,10 @@ class CountPostApprovals
         }
 
         if ($event->post->number == 1) {
-            $user->first_discussion_approval_count++;
+            $user->increment('first_discussion_approval_count');
         } else {
-            $user->first_post_approval_count++;
+            $user->increment('first_post_approval_count');
         }
 
-        $user->save();
     }
 }
