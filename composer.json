@@ -9,7 +9,9 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "flarum/core": "^2.0"
+        "flarum/core": "^2.0",
+        "flarum/flags": "^2.0",
+        "flarum/approval": "^2.0"
     },
     "authors": [
         {
