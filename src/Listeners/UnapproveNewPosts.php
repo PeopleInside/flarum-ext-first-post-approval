@@ -21,21 +21,37 @@ class UnapproveNewPosts
     {
         $post = $event->post;
 
-        if ($post->exists || $event->actor->can('firstPostWithoutApproval', $post->discussion)) {
+        if ($post->exists) {
+            return;
+        }
+
+        if (!$post->discussion) {
+            return;
+        }
+
+        if ($event->actor->can('firstPostWithoutApproval', $post->discussion)) {
             return;
         }
 
         $discussionCount = (int) ($this->settings->get('peopleinside-first-post-approval.discussionCount') ?? $this->settings->get('clarkwinkelmann-first-post-approval.discussionCount'));
         $postCount = (int) ($this->settings->get('peopleinside-first-post-approval.postCount') ?? $this->settings->get('clarkwinkelmann-first-post-approval.postCount'));
 
-        if ($post->discussion->first_post_id === null && $discussionCount > 0) {
+        $isFirstPost = $post->discussion->first_post_id === null && !$post->discussion->posts()->exists();
+
+        if ($isFirstPost && $discussionCount > 0) {
             // If this is a new discussion and if a rule has been defined for new discussions
             if (((int)$event->actor->first_discussion_approval_count) >= $discussionCount) {
                 return;
             }
         } else {
             // If this is a reply, or if there's no rule defined for new discussions
-            if ((((int)$event->actor->first_discussion_approval_count) + ((int)$event->actor->first_post_approval_count)) >= $postCount) {
+            $currentApprovedReplica = (int)$event->actor->first_post_approval_count;
+            if ($discussionCount === 0) {
+                // If there's no separate rule for discussions, then discussion approvals also count towards the post limit
+                $currentApprovedReplica += (int)$event->actor->first_discussion_approval_count;
+            }
+
+            if ($currentApprovedReplica >= $postCount) {
                 return;
             }
         }
