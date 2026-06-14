@@ -2,6 +2,7 @@
 
 namespace PeopleInside\FirstPostApproval\Listeners;
 
+use Carbon\Carbon;
 use Flarum\Flags\Flag;
 use Flarum\Post\Event\Saving;
 use Flarum\Post\Post;
@@ -20,20 +21,37 @@ class UnapproveNewPosts
     {
         $post = $event->post;
 
-        if ($post->exists || $event->actor->can('firstPostWithoutApproval', $post->discussion)) {
+        if ($post->exists) {
             return;
         }
 
-        $discussionCount = $this->settings->get('clarkwinkelmann-first-post-approval.discussionCount');
+        if (!$post->discussion) {
+            return;
+        }
 
-        if ($post->discussion->first_post_id === null && $discussionCount) {
+        if ($event->actor->can('firstPostWithoutApproval', $post->discussion)) {
+            return;
+        }
+
+        $discussionCount = (int) ($this->settings->get('peopleinside-first-post-approval.discussionCount') ?? $this->settings->get('clarkwinkelmann-first-post-approval.discussionCount'));
+        $postCount = (int) ($this->settings->get('peopleinside-first-post-approval.postCount') ?? $this->settings->get('clarkwinkelmann-first-post-approval.postCount'));
+
+        $isFirstPost = $post->discussion->first_post_id === null && !$post->discussion->posts()->exists();
+
+        if ($isFirstPost && $discussionCount > 0) {
             // If this is a new discussion and if a rule has been defined for new discussions
-            if ($event->actor->first_discussion_approval_count >= $discussionCount) {
+            if (((int)$event->actor->first_discussion_approval_count) >= $discussionCount) {
                 return;
             }
         } else {
             // If this is a reply, or if there's no rule defined for new discussions
-            if (($event->actor->first_discussion_approval_count + $event->actor->first_post_approval_count) >= $this->settings->get('clarkwinkelmann-first-post-approval.postCount')) {
+            $currentApprovedReplica = (int)$event->actor->first_post_approval_count;
+            if ($discussionCount === 0) {
+                // If there's no separate rule for discussions, then discussion approvals also count towards the post limit
+                $currentApprovedReplica += (int)$event->actor->first_discussion_approval_count;
+            }
+
+            if ($currentApprovedReplica >= $postCount) {
                 return;
             }
         }
@@ -50,7 +68,7 @@ class UnapproveNewPosts
 
             $flag->post_id = $post->id;
             $flag->type = 'approval';
-            $flag->created_at = time();
+            $flag->created_at = Carbon::now();
 
             $flag->save();
         });
