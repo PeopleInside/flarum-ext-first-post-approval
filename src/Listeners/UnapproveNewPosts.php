@@ -2,6 +2,7 @@
 
 namespace PeopleInside\FirstPostApproval\Listeners;
 
+use Carbon\Carbon;
 use Flarum\Flags\Flag;
 use Flarum\Post\Event\Saving;
 use Flarum\Post\Post;
@@ -24,16 +25,17 @@ class UnapproveNewPosts
             return;
         }
 
-        $discussionCount = $this->settings->get('clarkwinkelmann-first-post-approval.discussionCount');
+        $discussionCount = (int) $this->settings->get('clarkwinkelmann-first-post-approval.discussionCount');
+        $postCount = (int) $this->settings->get('clarkwinkelmann-first-post-approval.postCount');
 
-        if ($post->discussion->first_post_id === null && $discussionCount) {
+        if ($post->discussion->first_post_id === null && $discussionCount > 0) {
             // If this is a new discussion and if a rule has been defined for new discussions
-            if ($event->actor->first_discussion_approval_count >= $discussionCount) {
+            if (((int)$event->actor->first_discussion_approval_count) >= $discussionCount) {
                 return;
             }
         } else {
             // If this is a reply, or if there's no rule defined for new discussions
-            if (($event->actor->first_discussion_approval_count + $event->actor->first_post_approval_count) >= $this->settings->get('clarkwinkelmann-first-post-approval.postCount')) {
+            if ((((int)$event->actor->first_discussion_approval_count) + ((int)$event->actor->first_post_approval_count)) >= $postCount) {
                 return;
             }
         }
@@ -50,7 +52,7 @@ class UnapproveNewPosts
 
             $flag->post_id = $post->id;
             $flag->type = 'approval';
-            $flag->created_at = time();
+            $flag->created_at = Carbon::now();
 
             $flag->save();
         });
