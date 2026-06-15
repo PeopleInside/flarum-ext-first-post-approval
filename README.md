@@ -37,13 +37,7 @@ This extension is under **minimal maintenance**.
 It was developed for a client and released as open-source for the benefit of the community.
 I might publish simple bugfixes or compatibility updates for free.
 
-Support is offered on a "best effort" basis through the Flarum community thread.
-
-## Links
-
-- [GitHub](https://github.com/clarkwinkelmann/flarum-ext-first-post-approval)
-- [Packagist](https://packagist.org/packages/peopleinside/flarum-ext-first-post-approval)
-
 This is a fork of https://github.com/clarkwinkelmann/flarum-ext-first-post-approval that introduce support for Flarum 2.0 while try also to have a good code security and some improvements.
-If you need support you can open an issue https://github.com/PeopleInside/flarum-ext-first-post-approval/issues
-For security report please see https://github.com/PeopleInside/flarum-ext-first-post-approval/security/policy
+
+- Support: https://github.com/PeopleInside/flarum-ext-first-post-approval/issues
+- Security reports: https://github.com/PeopleInside/flarum-ext-first-post-approval/security/policy
