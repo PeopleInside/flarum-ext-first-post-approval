@@ -5,6 +5,7 @@ namespace PeopleInside\FirstPostApproval\Listeners;
 use Flarum\Post\Event\Deleting;
 use Flarum\Post\Event\Hidden;
 use Flarum\Post\Event\Restored;
+use Flarum\Post\Post;
 
 class SyncPostApprovals
 {
@@ -56,7 +57,7 @@ class SyncPostApprovals
             return;
         }
 
-        $discussionQuery = \Flarum\Post\Post::where('user_id', $user->id)
+        $discussionQuery = Post::where('user_id', $user->id)
             ->where('number', 1)
             ->where('is_approved', 1)
             ->whereNull('hidden_at');
@@ -67,7 +68,7 @@ class SyncPostApprovals
 
         $actualDiscussions = $discussionQuery->count();
 
-        $postQuery = \Flarum\Post\Post::where('user_id', $user->id)
+        $postQuery = Post::where('user_id', $user->id)
             ->where('number', '>', 1)
             ->where('is_approved', 1)
             ->whereNull('hidden_at');
