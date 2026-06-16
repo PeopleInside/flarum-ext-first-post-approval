@@ -5,6 +5,8 @@ namespace PeopleInside\FirstPostApproval\Listeners;
 use Flarum\Discussion\Event\Deleting;
 use Flarum\Discussion\Event\Hidden;
 use Flarum\Discussion\Event\Restored;
+use Flarum\Post\Post;
+use Flarum\User\User;
 
 class SyncDiscussionApprovals
 {
@@ -24,7 +26,7 @@ class SyncDiscussionApprovals
         $discussion = $event->discussion;
         
         // Find all unique users who have approved posts in this discussion
-        $userIds = \Flarum\Post\Post::where('discussion_id', $discussion->id)
+        $userIds = Post::where('discussion_id', $discussion->id)
             ->where('is_approved', 1)
             ->whereNull('hidden_at')
             ->pluck('user_id')
@@ -39,7 +41,7 @@ class SyncDiscussionApprovals
     {
         $discussion = $event->discussion;
         
-        $userIds = \Flarum\Post\Post::where('discussion_id', $discussion->id)
+        $userIds = Post::where('discussion_id', $discussion->id)
             ->where('is_approved', 1)
             ->whereNull('hidden_at')
             ->pluck('user_id')
@@ -54,21 +56,46 @@ class SyncDiscussionApprovals
     {
         $discussion = $event->discussion;
         
-        // Fix the lazy relationship loading N+1 issue on discussion restore by eager-loading 'user' relation
-        $posts = \Flarum\Post\Post::where('discussion_id', $discussion->id)
+        // Optimize the lazy relationship loading and prevent O(N) database UPDATE queries
+        // by grouping post approvals per user and updating them in bulk.
+        $posts = Post::where('discussion_id', $discussion->id)
             ->where('is_approved', 1)
             ->whereNull('hidden_at')
-            ->with('user')
             ->get();
 
+        $discussionIncrements = [];
+        $postIncrements = [];
+
         foreach ($posts as $post) {
-            $user = $post->user;
-            if ($user) {
-                if ($post->number == 1) {
-                    $user->increment('first_discussion_approval_count');
-                } else {
-                    $user->increment('first_post_approval_count');
+            $userId = $post->user_id;
+            if (!$userId) {
+                continue;
+            }
+
+            if ($post->number == 1) {
+                $discussionIncrements[$userId] = ($discussionIncrements[$userId] ?? 0) + 1;
+            } else {
+                $postIncrements[$userId] = ($postIncrements[$userId] ?? 0) + 1;
+            }
+        }
+
+        $userIds = array_unique(array_merge(array_keys($discussionIncrements), array_keys($postIncrements)));
+
+        if (!empty($userIds)) {
+            $users = User::whereIn('id', $userIds)->get();
+
+            foreach ($users as $user) {
+                $incDisc = $discussionIncrements[$user->id] ?? 0;
+                $incPost = $postIncrements[$user->id] ?? 0;
+
+                if ($incDisc > 0) {
+                    $user->first_discussion_approval_count += $incDisc;
                 }
+                if ($incPost > 0) {
+                    $user->first_post_approval_count += $incPost;
+                }
+                
+                $user->save();
             }
         }
     }
@@ -80,7 +107,7 @@ class SyncDiscussionApprovals
         }
 
         // Get actual discussion (number = 1) counts for all these users (O(1) bulk query)
-        $actualDiscussions = \Flarum\Post\Post::whereIn('user_id', $userIds)
+        $actualDiscussions = Post::whereIn('user_id', $userIds)
             ->where('number', 1)
             ->where('is_approved', 1)
             ->whereNull('hidden_at')
@@ -91,7 +118,7 @@ class SyncDiscussionApprovals
             ->toArray();
 
         // Get actual post (number > 1) counts for all these users (O(1) bulk query)
-        $actualPosts = \Flarum\Post\Post::whereIn('user_id', $userIds)
+        $actualPosts = Post::whereIn('user_id', $userIds)
             ->where('number', '>', 1)
             ->where('is_approved', 1)
             ->whereNull('hidden_at')
@@ -102,7 +129,7 @@ class SyncDiscussionApprovals
             ->toArray();
 
         // Fetch user models in bulk
-        $users = \Flarum\User\User::whereIn('id', $userIds)->get();
+        $users = User::whereIn('id', $userIds)->get();
 
         foreach ($users as $user) {
             $userDiscussions = $actualDiscussions[$user->id] ?? 0;
