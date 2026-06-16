@@ -21,10 +21,10 @@ return [
     (new Extend\Event())
         ->listen(PostWasApproved::class, Listeners\CountPostApprovals::class)
         ->listen(Saving::class, Listeners\UnapproveNewPosts::class)
-        ->listen(PostDeleting::class, Listeners\SyncPostApprovals::class)
-        ->listen(PostHidden::class, Listeners\SyncPostApprovals::class)
-        ->listen(PostRestored::class, Listeners\SyncPostApprovals::class)
-        ->listen(DiscussionDeleting::class, Listeners\SyncDiscussionApprovals::class)
-        ->listen(DiscussionHidden::class, Listeners\SyncDiscussionApprovals::class)
-        ->listen(DiscussionRestored::class, Listeners\SyncDiscussionApprovals::class),
+        ->listen(PostDeleting::class, Listeners\SyncPostDeleting::class)
+        ->listen(PostHidden::class, Listeners\SyncPostHidden::class)
+        ->listen(PostRestored::class, Listeners\SyncPostRestored::class)
+        ->listen(DiscussionDeleting::class, Listeners\SyncDiscussionDeleting::class)
+        ->listen(DiscussionHidden::class, Listeners\SyncDiscussionHidden::class)
+        ->listen(DiscussionRestored::class, Listeners\SyncDiscussionRestored::class),
 ];

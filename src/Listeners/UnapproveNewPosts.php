@@ -36,7 +36,7 @@ class UnapproveNewPosts
         $discussionCount = (int) ($this->settings->get('peopleinside-first-post-approval.discussionCount') ?? $this->settings->get('clarkwinkelmann-first-post-approval.discussionCount'));
         $postCount = (int) ($this->settings->get('peopleinside-first-post-approval.postCount') ?? $this->settings->get('clarkwinkelmann-first-post-approval.postCount'));
 
-        $isFirstPost = $post->discussion->first_post_id === null && !$post->discussion->posts()->exists();
+        $isFirstPost = $post->discussion->first_post_id === null;
 
         if ($isFirstPost && $discussionCount > 0) {
             // If this is a new discussion and if a rule has been defined for new discussions
