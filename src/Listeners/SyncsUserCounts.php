@@ -68,16 +68,39 @@ trait SyncsUserCounts
             ->pluck('count', 'user_id')
             ->toArray();
 
-        // Fetch user models in bulk
-        $users = User::whereIn('id', $userIds)->get();
+        // Fetch only the current counters in bulk (no full models needed, avoids per-row saves)
+        $currentCounts = User::whereIn('id', $userIds)
+            ->get(['id', 'first_discussion_approval_count', 'first_post_approval_count'])
+            ->keyBy('id');
 
-        foreach ($users as $user) {
-            $userDiscussions = $actualDiscussions[$user->id] ?? 0;
-            $userPosts = $actualPosts[$user->id] ?? 0;
+        // Compute the final (post-min) value for each user, then group user IDs by
+        // their resulting (discussion, post) pair so each distinct pair can be written
+        // with a single bulk UPDATE instead of one save() per user.
+        $groups = [];
 
-            $user->first_discussion_approval_count = min($user->first_discussion_approval_count, $userDiscussions);
-            $user->first_post_approval_count = min($user->first_post_approval_count, $userPosts);
-            $user->save();
+        foreach ($currentCounts as $userId => $user) {
+            $userDiscussions = $actualDiscussions[$userId] ?? 0;
+            $userPosts = $actualPosts[$userId] ?? 0;
+
+            $newDiscussionCount = min($user->first_discussion_approval_count, $userDiscussions);
+            $newPostCount = min($user->first_post_approval_count, $userPosts);
+
+            // No-op for this user: skip it entirely, no need to touch the row.
+            if ($newDiscussionCount === $user->first_discussion_approval_count
+                && $newPostCount === $user->first_post_approval_count) {
+                continue;
+            }
+
+            $groups[$newDiscussionCount . ':' . $newPostCount][] = $userId;
+        }
+
+        foreach ($groups as $key => $ids) {
+            [$discussionCount, $postCount] = array_map('intval', explode(':', $key));
+
+            User::whereIn('id', $ids)->update([
+                'first_discussion_approval_count' => $discussionCount,
+                'first_post_approval_count' => $postCount,
+            ]);
         }
     }
 }
