@@ -1,51 +1,34 @@
 {
-    "name": "peopleinside/flarum-ext-first-post-approval",
-    "description": "Hold posts and discussions from new users for approval",
-    "keywords": [
-        "flarum",
-        "approval"
-    ],
-    "type": "flarum-extension",
-    "license": "MIT",
-    "require": {
-        "php": "^8.2",
-        "flarum/core": "^2.0",
-        "flarum/flags": "^2.0",
-        "flarum/approval": "^2.0"
-    },
-    "authors": [
-        {
-            "name": "Clark Winkelmann",
-            "homepage": "https://github.com/clarkwinkelmann",
-            "role": "Original Developer"
-        },
-        {
-            "name": "PeopleInside",
-            "homepage": "https://github.com/PeopleInside",
-            "role": "Maintainer"
-        }
-    ],
-    "support": {
-        "issues": "https://github.com/PeopleInside/flarum-ext-first-post-approval/issues",
-        "source": "https://github.com/PeopleInside/flarum-ext-first-post-approval"
-    },
-    "autoload": {
-        "psr-4": {
-            "PeopleInside\\FirstPostApproval\\": "src/"
-        }
-    },
-    "extra": {
-        "flarum-extension": {
-            "title": "First Post Approval",
-            "category": "moderation",
-            "icon": {
-                "name": "fas fa-check",
-                "backgroundColor": "#684ba6",
-                "color": "#fff"
-            }
-        }
-    },
-    "config": {
-        "sort-packages": true
+  "name": "peopleinside/flarum-ext-first-post-approval",
+  "description": "Flarum extension to hold the first posts of new users for moderator approval.",
+  "type": "flarum-extension",
+  "keywords": ["flarum", "approval", "moderation", "spam"],
+  "license": "Apache-2.0",
+  "authors": [
+    {
+      "name": "Peopleinside",
+      "homepage": "https://github.com/PeopleInside/flarum-ext-first-post-approval"
     }
+  ],
+  "require": {
+    "php": "^8.0",
+    "flarum/core": "^1.0 || ^2.0",
+    "flarum/approval": "*"
+  },
+  "suggest": {
+    "peopleinside/flarum-ext-antiflood": "Complements first-post approval by preventing rapid-fire posting from both new and existing users."
+  },
+  "autoload": {
+    "psr-4": {
+      "Peopleinside\\FirstPostApproval\\": "src/"
+    }
+  },
+  "extra": {
+    "flarum-extension": {
+      "title": "First Post Approval",
+      "icon": {
+        "name": "fas fa-user-check"
+      }
+    }
+  }
 }
