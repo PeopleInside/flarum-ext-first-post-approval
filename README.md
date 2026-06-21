@@ -30,6 +30,33 @@ Flarum's **Approval** and **Flags** extensions must be enabled.
 
     composer require peopleinside/flarum-ext-first-post-approval
 
+## Updating
+
+To update the extension to the latest version, run:
+
+    composer update peopleinside/flarum-ext-first-post-approval
+    php flarum cache:clear
+
+## Uninstalling
+
+To completely remove the extension from your Flarum installation:
+
+
+    composer remove peopleinside/flarum-ext-first-post-approval
+    php flarum cache:clear
+
+## Recommendations
+
+To build a complete moderation toolkit for your forum, this extension works best when combined with:
+
+### [AntiFlood by PeopleInside](https://github.com/PeopleInside/flarum-ext-antiflood)
+
+While **First Post Approval** reviews the very first posts of new users, **AntiFlood** prevents rapid-fire posting from *all* users, protecting your forum from spam bursts and accidental flooding. Together, they cover both new accounts and established members.
+
+Install it via Composer:
+
+     composer require peopleinside/flarum-ext-antiflood
+
 ## Support
 
 This extension is under **minimal maintenance**.
