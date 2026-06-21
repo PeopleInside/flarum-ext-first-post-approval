@@ -20,7 +20,7 @@
   },
   "autoload": {
     "psr-4": {
-      "Peopleinside\\FirstPostApproval\\": "src/"
+      "PeopleInside\\FirstPostApproval\\": "src/"
     }
   },
   "extra": {
