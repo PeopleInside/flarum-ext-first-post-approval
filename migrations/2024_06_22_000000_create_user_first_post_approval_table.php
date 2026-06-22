@@ -5,6 +5,8 @@ use Illuminate\Database\Schema\Builder;
 
 return [
     'up' => function (Builder $schema) {
+        $prefix = $schema->getConnection()->getTablePrefix();
+        
         $schema->create('user_first_post_approval', function (Blueprint $table) {
             $table->unsignedInteger('user_id')->primary();
             $table->unsignedInteger('first_post_approval_count')->default(0);
@@ -17,9 +19,9 @@ return [
         
         if ($connection->getSchemaBuilder()->hasColumn('users', 'first_post_approval_count')) {
             $connection->statement('
-                INSERT INTO user_first_post_approval (user_id, first_post_approval_count, first_discussion_approval_count)
+                INSERT INTO ' . $prefix . 'user_first_post_approval (user_id, first_post_approval_count, first_discussion_approval_count)
                 SELECT id, first_post_approval_count, first_discussion_approval_count
-                FROM users
+                FROM ' . $prefix . 'users
                 WHERE first_post_approval_count > 0 OR first_discussion_approval_count > 0
             ');
             
@@ -32,6 +34,8 @@ return [
         }
     },
     'down' => function (Builder $schema) {
+        $prefix = $schema->getConnection()->getTablePrefix();
+        
         $schema->table('users', function (Blueprint $table) {
             $table->unsignedInteger('first_post_approval_count')->default(0);
             $table->unsignedInteger('first_discussion_approval_count')->default(0);
