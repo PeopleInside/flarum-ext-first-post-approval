@@ -4,12 +4,12 @@ namespace PeopleInside\FirstPostApproval\Listeners;
 
 use Flarum\Post\Post;
 use Flarum\User\User;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Query\Expression;
 
 trait SyncsUserCounts
 {
     /**
-     * Ricalcola i conteggi per un singolo utente (usato per post hiding/deleting).
+     * Recalculate counts for a single user (used for post hiding/deleting).
      */
     protected function syncUser($user, $excludingPostId = null)
     {
@@ -45,8 +45,8 @@ trait SyncsUserCounts
     }
 
     /**
-     * Ricalcola i conteggi per più utenti dopo la cancellazione/nascondimento di una discussione.
-     * Imposta i valori al numero effettivo di post approvati e visibili.
+     * Recalculate counts for multiple users after a discussion is deleted/hidden.
+     * Set values to the actual number of approved and visible posts.
      */
     protected function syncUsers($userIds, $excludingDiscussionId)
     {
@@ -105,16 +105,16 @@ trait SyncsUserCounts
     }
 
     /**
-     * Incrementa i conteggi per tutti gli utenti che hanno post in una discussione ripristinata.
-     * Raggruppa gli utenti per coppia (discInc, postInc) ed esegue un singolo UPDATE per gruppo,
-     * aggiornando entrambi i campi in una sola query.
+     * Increment counts for all users who have posts in a restored discussion.
+     * Group users by pair (discInc, postInc) and execute a single UPDATE per group,
+     * updating both fields in one query.
      */
     protected function syncUsersIncrement($discussionId)
     {
         $posts = Post::where('discussion_id', $discussionId)
             ->where('is_approved', 1)
             ->whereNull('hidden_at')
-            ->get();
+            ->get(['user_id', 'number']);
 
         $discussionIncrements = [];
         $postIncrements = [];
@@ -132,7 +132,7 @@ trait SyncsUserCounts
             }
         }
 
-        // Raggruppa gli utenti per la coppia (incremento discussioni, incremento post)
+        // Group users by pair (discussion increment, post increment)
         $allUserIds = array_unique(array_merge(
             array_keys($discussionIncrements),
             array_keys($postIncrements)
@@ -148,18 +148,18 @@ trait SyncsUserCounts
             }
         }
 
-        // Un singolo UPDATE per gruppo: aggiorna entrambi i campi in una query
+        // Single UPDATE per group: update both fields in one query
         foreach ($groups as $key => $ids) {
             [$discInc, $postInc] = array_map('intval', explode(':', $key));
 
             $updateData = [];
             if ($discInc > 0) {
-                $updateData['first_discussion_approval_count'] = DB::raw(
+                $updateData['first_discussion_approval_count'] = new Expression(
                     "first_discussion_approval_count + $discInc"
                 );
             }
             if ($postInc > 0) {
-                $updateData['first_post_approval_count'] = DB::raw(
+                $updateData['first_post_approval_count'] = new Expression(
                     "first_post_approval_count + $postInc"
                 );
             }
