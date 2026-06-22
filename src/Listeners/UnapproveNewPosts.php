@@ -7,6 +7,7 @@ use Flarum\Flags\Flag;
 use Flarum\Post\Event\Saving;
 use Flarum\Post\Post;
 use Flarum\Settings\SettingsRepositoryInterface;
+use Illuminate\Support\Facades\DB;
 
 class UnapproveNewPosts
 {
@@ -38,17 +39,19 @@ class UnapproveNewPosts
 
         $isFirstPost = $post->discussion->first_post_id === null;
 
+        // Leggi i contatori dalla nuova tabella
+        $approval = DB::table('user_first_post_approval')->where('user_id', $event->actor->id)->first();
+        $actorDiscussionCount = $approval ? (int) $approval->first_discussion_approval_count : 0;
+        $actorPostCount = $approval ? (int) $approval->first_post_approval_count : 0;
+
         if ($isFirstPost && $discussionCount > 0) {
-            // If this is a new discussion and if a rule has been defined for new discussions
-            if (((int)$event->actor->first_discussion_approval_count) >= $discussionCount) {
+            if ($actorDiscussionCount >= $discussionCount) {
                 return;
             }
         } else {
-            // If this is a reply, or if there's no rule defined for new discussions
-            $currentApprovedReplica = (int)$event->actor->first_post_approval_count;
+            $currentApprovedReplica = $actorPostCount;
             if ($discussionCount === 0) {
-                // If there's no separate rule for discussions, then discussion approvals also count towards the post limit
-                $currentApprovedReplica += (int)$event->actor->first_discussion_approval_count;
+                $currentApprovedReplica += $actorDiscussionCount;
             }
 
             if ($currentApprovedReplica >= $postCount) {
@@ -65,11 +68,9 @@ class UnapproveNewPosts
             }
 
             $flag = new Flag();
-
             $flag->post_id = $post->id;
             $flag->type = 'approval';
             $flag->created_at = Carbon::now();
-
             $flag->save();
         });
     }
