@@ -10,6 +10,6 @@ class SyncPostRestored
 
     public function handle(Restored $event)
     {
-        $this->syncUser($event->post->user);
+        $this->syncUserIncrement($event->post);
     }
 }
