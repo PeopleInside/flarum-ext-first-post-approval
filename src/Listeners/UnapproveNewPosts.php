@@ -7,17 +7,15 @@ use Flarum\Flags\Flag;
 use Flarum\Post\Event\Saving;
 use Flarum\Post\Post;
 use Flarum\Settings\SettingsRepositoryInterface;
-use Illuminate\Database\ConnectionInterface;
+use PeopleInside\FirstPostApproval\Models\UserFirstPostApproval;
 
 class UnapproveNewPosts
 {
     protected $settings;
-    protected $db;
 
-    public function __construct(SettingsRepositoryInterface $settings, ConnectionInterface $db)
+    public function __construct(SettingsRepositoryInterface $settings)
     {
         $this->settings = $settings;
-        $this->db = $db;
     }
 
     public function handle(Saving $event)
@@ -41,7 +39,8 @@ class UnapproveNewPosts
 
         $isFirstPost = $post->discussion->first_post_id === null;
 
-        $approval = $this->db->table('user_first_post_approval')->where('user_id', $event->actor->id)->first();
+        // Lettura tramite il modello Eloquent
+        $approval = UserFirstPostApproval::find($event->actor->id);
         $actorDiscussionCount = $approval ? (int) $approval->first_discussion_approval_count : 0;
         $actorPostCount = $approval ? (int) $approval->first_post_approval_count : 0;
 
