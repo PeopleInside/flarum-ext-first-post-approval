@@ -11,6 +11,6 @@ class SyncDiscussionRestored
     public function handle(Restored $event)
     {
         $userIds = $event->discussion->posts()->pluck('user_id')->unique()->toArray();
-        $this->syncUsers($userIds, $event->discussion->id);
+        $this->syncUsers($userIds, 0);
     }
 }
