@@ -2,7 +2,6 @@
 
 [![Latest Stable Version](https://img.shields.io/packagist/v/peopleinside/flarum-ext-first-post-approval.svg)](https://packagist.org/packages/peopleinside/flarum-ext-first-post-approval)
 [![Total Downloads](https://img.shields.io/packagist/dt/peopleinside/flarum-ext-first-post-approval.svg)](https://packagist.org/packages/peopleinside/flarum-ext-first-post-approval)
-[![License](https://img.shields.io/github/license/PeopleInside/flarum-ext-first-post-approval.svg)](LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/PeopleInside/flarum-ext-first-post-approval.svg)](https://github.com/PeopleInside/flarum-ext-first-post-approval/issues)
 
 This extension holds the first n posts and/or discussions from users for approval.
