@@ -3,8 +3,7 @@
 namespace PeopleInside\FirstPostApproval\Listeners;
 
 use Flarum\Post\Post;
-use Flarum\User\User;
-use Illuminate\Database\Query\Expression;
+use Illuminate\Support\Facades\DB;
 
 trait SyncsUserCounts
 {
@@ -39,14 +38,21 @@ trait SyncsUserCounts
 
         $actualPosts = $postQuery->count();
 
-        $user->first_discussion_approval_count = min($user->first_discussion_approval_count, $actualDiscussions);
-        $user->first_post_approval_count = min($user->first_post_approval_count, $actualPosts);
-        $user->save();
+        $current = DB::table('user_first_post_approval')->where('user_id', $user->id)->first();
+        $currentDisc = $current ? (int) $current->first_discussion_approval_count : 0;
+        $currentPost = $current ? (int) $current->first_post_approval_count : 0;
+
+        DB::table('user_first_post_approval')->updateOrInsert(
+            ['user_id' => $user->id],
+            [
+                'first_discussion_approval_count' => min($currentDisc, $actualDiscussions),
+                'first_post_approval_count' => min($currentPost, $actualPosts),
+            ]
+        );
     }
 
     /**
      * Recalculate counts for multiple users after a discussion is deleted/hidden.
-     * Set values to the actual number of approved and visible posts.
      */
     protected function syncUsers($userIds, $excludingDiscussionId)
     {
@@ -54,6 +60,12 @@ trait SyncsUserCounts
             return;
         }
 
+        $groups = $this->diffUserCounts($userIds, $excludingDiscussionId);
+        $this->applyUserCountUpdates($groups);
+    }
+
+    private function diffUserCounts(array $userIds, int $excludingDiscussionId): array
+    {
         $actualDiscussions = Post::whereIn('user_id', $userIds)
             ->where('number', 1)
             ->where('is_approved', 1)
@@ -74,98 +86,134 @@ trait SyncsUserCounts
             ->pluck('count', 'user_id')
             ->toArray();
 
-        $currentCounts = User::whereIn('id', $userIds)
-            ->get(['id', 'first_discussion_approval_count', 'first_post_approval_count'])
-            ->keyBy('id');
+        $currentCounts = DB::table('user_first_post_approval')
+            ->whereIn('user_id', $userIds)
+            ->get(['user_id', 'first_discussion_approval_count', 'first_post_approval_count'])
+            ->keyBy('user_id');
 
         $groups = [];
-        foreach ($currentCounts as $userId => $user) {
+        foreach ($userIds as $userId) {
+            $current = $currentCounts[$userId] ?? null;
+            $currentDisc = $current ? (int) $current->first_discussion_approval_count : 0;
+            $currentPost = $current ? (int) $current->first_post_approval_count : 0;
+
             $userDiscussions = $actualDiscussions[$userId] ?? 0;
             $userPosts = $actualPosts[$userId] ?? 0;
 
-            $newDiscussionCount = min($user->first_discussion_approval_count, $userDiscussions);
-            $newPostCount = min($user->first_post_approval_count, $userPosts);
+            $newDiscussionCount = min($currentDisc, $userDiscussions);
+            $newPostCount = min($currentPost, $userPosts);
 
-            if ($newDiscussionCount === $user->first_discussion_approval_count
-                && $newPostCount === $user->first_post_approval_count) {
+            if ($newDiscussionCount === $currentDisc && $newPostCount === $currentPost) {
                 continue;
             }
 
             $groups[$newDiscussionCount . ':' . $newPostCount][] = $userId;
         }
 
+        return $groups;
+    }
+
+    private function applyUserCountUpdates(array $groups): void
+    {
         foreach ($groups as $key => $ids) {
             [$discussionCount, $postCount] = array_map('intval', explode(':', $key));
 
-            User::whereIn('id', $ids)->update([
-                'first_discussion_approval_count' => $discussionCount,
-                'first_post_approval_count' => $postCount,
-            ]);
+            DB::table('user_first_post_approval')
+                ->whereIn('user_id', $ids)
+                ->update([
+                    'first_discussion_approval_count' => $discussionCount,
+                    'first_post_approval_count' => $postCount,
+                ]);
+
+            $existingIds = DB::table('user_first_post_approval')
+                ->whereIn('user_id', $ids)
+                ->pluck('user_id')
+                ->toArray();
+
+            $missingIds = array_diff($ids, $existingIds);
+            if (!empty($missingIds)) {
+                $insertData = [];
+                foreach ($missingIds as $userId) {
+                    $insertData[] = [
+                        'user_id' => $userId,
+                        'first_discussion_approval_count' => $discussionCount,
+                        'first_post_approval_count' => $postCount,
+                    ];
+                }
+                DB::table('user_first_post_approval')->insert($insertData);
+            }
         }
     }
 
     /**
      * Increment counts for all users who have posts in a restored discussion.
-     * Group users by pair (discInc, postInc) and execute a single UPDATE per group,
-     * updating both fields in one query.
      */
     protected function syncUsersIncrement($discussionId)
     {
-        $posts = Post::where('discussion_id', $discussionId)
+        $increments = $this->aggregatePostIncrements($discussionId);
+        $groups = $this->groupIncrements($increments);
+        $this->applyIncrements($groups);
+    }
+
+    private function aggregatePostIncrements(int $discussionId): array
+    {
+        return Post::where('discussion_id', $discussionId)
             ->where('is_approved', 1)
             ->whereNull('hidden_at')
-            ->get(['user_id', 'number']);
+            ->groupBy('user_id')
+            ->selectRaw('user_id, SUM(CASE WHEN number = 1 THEN 1 ELSE 0 END) as disc_inc, SUM(CASE WHEN number > 1 THEN 1 ELSE 0 END) as post_inc')
+            ->get()
+            ->keyBy('user_id')
+            ->toArray();
+    }
 
-        $discussionIncrements = [];
-        $postIncrements = [];
-
-        foreach ($posts as $post) {
-            $userId = $post->user_id;
-            if (!$userId) {
-                continue;
-            }
-
-            if ($post->number == 1) {
-                $discussionIncrements[$userId] = ($discussionIncrements[$userId] ?? 0) + 1;
-            } else {
-                $postIncrements[$userId] = ($postIncrements[$userId] ?? 0) + 1;
-            }
-        }
-
-        // Group users by pair (discussion increment, post increment)
-        $allUserIds = array_unique(array_merge(
-            array_keys($discussionIncrements),
-            array_keys($postIncrements)
-        ));
-
+    private function groupIncrements(array $increments): array
+    {
         $groups = [];
-        foreach ($allUserIds as $userId) {
-            $discInc = $discussionIncrements[$userId] ?? 0;
-            $postInc = $postIncrements[$userId] ?? 0;
+        foreach ($increments as $userId => $row) {
+            $discInc = (int) $row->disc_inc;
+            $postInc = (int) $row->post_inc;
 
             if ($discInc > 0 || $postInc > 0) {
                 $groups[$discInc . ':' . $postInc][] = $userId;
             }
         }
+        return $groups;
+    }
 
-        // Single UPDATE per group: update both fields in one query
+    private function applyIncrements(array $groups): void
+    {
         foreach ($groups as $key => $ids) {
             [$discInc, $postInc] = array_map('intval', explode(':', $key));
 
-            $updateData = [];
             if ($discInc > 0) {
-                $updateData['first_discussion_approval_count'] = new Expression(
-                    "first_discussion_approval_count + $discInc"
-                );
+                DB::table('user_first_post_approval')
+                    ->whereIn('user_id', $ids)
+                    ->increment('first_discussion_approval_count', $discInc);
             }
+            
             if ($postInc > 0) {
-                $updateData['first_post_approval_count'] = new Expression(
-                    "first_post_approval_count + $postInc"
-                );
+                DB::table('user_first_post_approval')
+                    ->whereIn('user_id', $ids)
+                    ->increment('first_post_approval_count', $postInc);
             }
 
-            if (!empty($updateData)) {
-                User::whereIn('id', $ids)->update($updateData);
+            $existingIds = DB::table('user_first_post_approval')
+                ->whereIn('user_id', $ids)
+                ->pluck('user_id')
+                ->toArray();
+
+            $missingIds = array_diff($ids, $existingIds);
+            if (!empty($missingIds)) {
+                $insertData = [];
+                foreach ($missingIds as $userId) {
+                    $insertData[] = [
+                        'user_id' => $userId,
+                        'first_discussion_approval_count' => $discInc,
+                        'first_post_approval_count' => $postInc,
+                    ];
+                }
+                DB::table('user_first_post_approval')->insert($insertData);
             }
         }
     }
