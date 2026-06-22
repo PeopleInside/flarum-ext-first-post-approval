@@ -2,18 +2,12 @@
 
 namespace PeopleInside\FirstPostApproval\Listeners;
 
-use Flarum\Approval\Event\PostWasApproved;
-use Illuminate\Database\ConnectionInterface;
+use Flarum\Post\Event\PostWasApproved;
+use Illuminate\Support\Facades\DB;
+use PeopleInside\FirstPostApproval\Models\UserFirstPostApproval;
 
 class CountPostApprovals
 {
-    protected $db;
-
-    public function __construct(ConnectionInterface $db)
-    {
-        $this->db = $db;
-    }
-
     public function handle(PostWasApproved $event)
     {
         $user = $event->post->user;
@@ -27,18 +21,21 @@ class CountPostApprovals
         }
 
         $isDiscussion = $event->post->number == 1;
-        $exists = $this->db->table('user_first_post_approval')->where('user_id', $user->id)->exists();
-        
-        if (!$exists) {
-            $this->db->table('user_first_post_approval')->insert([
-                'user_id' => $user->id,
-                'first_discussion_approval_count' => $isDiscussion ? 1 : 0,
-                'first_post_approval_count' => !$isDiscussion ? 1 : 0,
-            ]);
-        } else {
-            $this->db->table('user_first_post_approval')
-                ->where('user_id', $user->id)
-                ->increment($isDiscussion ? 'first_discussion_approval_count' : 'first_post_approval_count');
-        }
+
+        // Utilizzo di upsert per garantire atomicità ed evitare race conditions
+        UserFirstPostApproval::upsert(
+            [
+                [
+                    'user_id' => $user->id,
+                    'first_discussion_approval_count' => $isDiscussion ? 1 : 0,
+                    'first_post_approval_count' => !$isDiscussion ? 1 : 0,
+                ]
+            ],
+            ['user_id'],
+            [
+                'first_discussion_approval_count' => DB::raw('first_discussion_approval_count + ' . ($isDiscussion ? 1 : 0)),
+                'first_post_approval_count' => DB::raw('first_post_approval_count + ' . (!$isDiscussion ? 1 : 0)),
+            ]
+        );
     }
 }
