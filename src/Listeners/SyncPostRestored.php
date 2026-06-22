@@ -3,21 +3,21 @@
 namespace PeopleInside\FirstPostApproval\Listeners;
 
 use Flarum\Post\Event\Restored;
+use Illuminate\Database\ConnectionInterface;
 
 class SyncPostRestored
 {
+    use SyncsUserCounts;
+
+    protected $db;
+
+    public function __construct(ConnectionInterface $db)
+    {
+        $this->db = $db;
+    }
+
     public function handle(Restored $event)
     {
-        $post = $event->post;
-        if ($post->is_approved) {
-            $user = $post->user;
-            if ($user) {
-                if ($post->number == 1) {
-                    $user->increment('first_discussion_approval_count');
-                } else {
-                    $user->increment('first_post_approval_count');
-                }
-            }
-        }
+        $this->syncUser($event->post->user);
     }
 }

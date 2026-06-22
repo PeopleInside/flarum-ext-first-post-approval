@@ -3,13 +3,9 @@
 namespace PeopleInside\FirstPostApproval\Listeners;
 
 use Flarum\Post\Post;
-use Illuminate\Support\Facades\DB;
 
 trait SyncsUserCounts
 {
-    /**
-     * Recalculate counts for a single user (used for post hiding/deleting).
-     */
     protected function syncUser($user, $excludingPostId = null)
     {
         if (!$user) {
@@ -38,11 +34,11 @@ trait SyncsUserCounts
 
         $actualPosts = $postQuery->count();
 
-        $current = DB::table('user_first_post_approval')->where('user_id', $user->id)->first();
+        $current = $this->db->table('user_first_post_approval')->where('user_id', $user->id)->first();
         $currentDisc = $current ? (int) $current->first_discussion_approval_count : 0;
         $currentPost = $current ? (int) $current->first_post_approval_count : 0;
 
-        DB::table('user_first_post_approval')->updateOrInsert(
+        $this->db->table('user_first_post_approval')->updateOrInsert(
             ['user_id' => $user->id],
             [
                 'first_discussion_approval_count' => min($currentDisc, $actualDiscussions),
@@ -51,9 +47,6 @@ trait SyncsUserCounts
         );
     }
 
-    /**
-     * Recalculate counts for multiple users after a discussion is deleted/hidden.
-     */
     protected function syncUsers($userIds, $excludingDiscussionId)
     {
         if (empty($userIds)) {
@@ -86,7 +79,7 @@ trait SyncsUserCounts
             ->pluck('count', 'user_id')
             ->toArray();
 
-        $currentCounts = DB::table('user_first_post_approval')
+        $currentCounts = $this->db->table('user_first_post_approval')
             ->whereIn('user_id', $userIds)
             ->get(['user_id', 'first_discussion_approval_count', 'first_post_approval_count'])
             ->keyBy('user_id');
@@ -118,14 +111,14 @@ trait SyncsUserCounts
         foreach ($groups as $key => $ids) {
             [$discussionCount, $postCount] = array_map('intval', explode(':', $key));
 
-            DB::table('user_first_post_approval')
+            $this->db->table('user_first_post_approval')
                 ->whereIn('user_id', $ids)
                 ->update([
                     'first_discussion_approval_count' => $discussionCount,
                     'first_post_approval_count' => $postCount,
                 ]);
 
-            $existingIds = DB::table('user_first_post_approval')
+            $existingIds = $this->db->table('user_first_post_approval')
                 ->whereIn('user_id', $ids)
                 ->pluck('user_id')
                 ->toArray();
@@ -140,14 +133,11 @@ trait SyncsUserCounts
                         'first_post_approval_count' => $postCount,
                     ];
                 }
-                DB::table('user_first_post_approval')->insert($insertData);
+                $this->db->table('user_first_post_approval')->insert($insertData);
             }
         }
     }
 
-    /**
-     * Increment counts for all users who have posts in a restored discussion.
-     */
     protected function syncUsersIncrement($discussionId)
     {
         $increments = $this->aggregatePostIncrements($discussionId);
@@ -187,18 +177,18 @@ trait SyncsUserCounts
             [$discInc, $postInc] = array_map('intval', explode(':', $key));
 
             if ($discInc > 0) {
-                DB::table('user_first_post_approval')
+                $this->db->table('user_first_post_approval')
                     ->whereIn('user_id', $ids)
                     ->increment('first_discussion_approval_count', $discInc);
             }
             
             if ($postInc > 0) {
-                DB::table('user_first_post_approval')
+                $this->db->table('user_first_post_approval')
                     ->whereIn('user_id', $ids)
                     ->increment('first_post_approval_count', $postInc);
             }
 
-            $existingIds = DB::table('user_first_post_approval')
+            $existingIds = $this->db->table('user_first_post_approval')
                 ->whereIn('user_id', $ids)
                 ->pluck('user_id')
                 ->toArray();
@@ -213,7 +203,7 @@ trait SyncsUserCounts
                         'first_post_approval_count' => $postInc,
                     ];
                 }
-                DB::table('user_first_post_approval')->insert($insertData);
+                $this->db->table('user_first_post_approval')->insert($insertData);
             }
         }
     }
