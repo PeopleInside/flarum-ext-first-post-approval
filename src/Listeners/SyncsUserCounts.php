@@ -48,6 +48,22 @@ trait SyncsUserCounts
         );
     }
 
+    protected function syncUserIncrement($post)
+    {
+        if (!$post->is_approved || $post->hidden_at) {
+            return;
+        }
+
+        $isFirstPost = ((int) $post->number) === 1;
+        $column = $isFirstPost ? 'first_discussion_approval_count' : 'first_post_approval_count';
+
+        UserFirstPostApproval::upsert(
+            [['user_id' => $post->user->id, $column => 1]],
+            ['user_id'],
+            [$column => UserFirstPostApproval::query()->raw("`$column` + 1")]
+        );
+    }
+
     protected function syncUsers($userIds, $excludingDiscussionId)
     {
         if (empty($userIds)) {
@@ -120,7 +136,6 @@ trait SyncsUserCounts
                 ];
             }
 
-            // upsert garantisce atomicità ed evita il pattern UPDATE -> SELECT -> INSERT
             UserFirstPostApproval::upsert(
                 $insertData,
                 ['user_id'],
@@ -176,7 +191,6 @@ trait SyncsUserCounts
                 ];
             }
 
-            // upsert con raw() dal query builder del modello per incrementare in modo atomico
             UserFirstPostApproval::upsert(
                 $insertData,
                 ['user_id'],
