@@ -54,6 +54,10 @@ trait SyncsUserCounts
             return;
         }
 
+        if (!$post->user) {
+            return;
+        }
+
         $isFirstPost = ((int) $post->number) === 1;
         $column = $isFirstPost ? 'first_discussion_approval_count' : 'first_post_approval_count';
 
@@ -167,8 +171,8 @@ trait SyncsUserCounts
     {
         $groups = [];
         foreach ($increments as $userId => $row) {
-            $discInc = (int) $row->disc_inc;
-            $postInc = (int) $row->post_inc;
+            $discInc = (int) ($row['disc_inc'] ?? 0);
+            $postInc = (int) ($row['post_inc'] ?? 0);
 
             if ($discInc > 0 || $postInc > 0) {
                 $groups[$discInc . ':' . $postInc][] = $userId;
