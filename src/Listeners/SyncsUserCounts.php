@@ -3,7 +3,6 @@
 namespace PeopleInside\FirstPostApproval\Listeners;
 
 use Flarum\Post\Post;
-use Illuminate\Support\Facades\DB;
 use PeopleInside\FirstPostApproval\Models\UserFirstPostApproval;
 
 trait SyncsUserCounts
@@ -177,13 +176,13 @@ trait SyncsUserCounts
                 ];
             }
 
-            // upsert con DB::raw per incrementare in modo atomico
+            // upsert con raw() dal query builder del modello per incrementare in modo atomico
             UserFirstPostApproval::upsert(
                 $insertData,
                 ['user_id'],
                 [
-                    'first_discussion_approval_count' => DB::raw('first_discussion_approval_count + ' . $discInc),
-                    'first_post_approval_count' => DB::raw('first_post_approval_count + ' . $postInc),
+                    'first_discussion_approval_count' => UserFirstPostApproval::query()->raw('first_discussion_approval_count + ' . $discInc),
+                    'first_post_approval_count' => UserFirstPostApproval::query()->raw('first_post_approval_count + ' . $postInc),
                 ]
             );
         }
