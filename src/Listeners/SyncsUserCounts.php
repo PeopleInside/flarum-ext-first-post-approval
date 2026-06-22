@@ -3,6 +3,8 @@
 namespace PeopleInside\FirstPostApproval\Listeners;
 
 use Flarum\Post\Post;
+use Illuminate\Support\Facades\DB;
+use PeopleInside\FirstPostApproval\Models\UserFirstPostApproval;
 
 trait SyncsUserCounts
 {
@@ -34,11 +36,11 @@ trait SyncsUserCounts
 
         $actualPosts = $postQuery->count();
 
-        $current = $this->db->table('user_first_post_approval')->where('user_id', $user->id)->first();
+        $current = UserFirstPostApproval::find($user->id);
         $currentDisc = $current ? (int) $current->first_discussion_approval_count : 0;
         $currentPost = $current ? (int) $current->first_post_approval_count : 0;
 
-        $this->db->table('user_first_post_approval')->updateOrInsert(
+        UserFirstPostApproval::updateOrInsert(
             ['user_id' => $user->id],
             [
                 'first_discussion_approval_count' => min($currentDisc, $actualDiscussions),
@@ -79,8 +81,7 @@ trait SyncsUserCounts
             ->pluck('count', 'user_id')
             ->toArray();
 
-        $currentCounts = $this->db->table('user_first_post_approval')
-            ->whereIn('user_id', $userIds)
+        $currentCounts = UserFirstPostApproval::whereIn('user_id', $userIds)
             ->get(['user_id', 'first_discussion_approval_count', 'first_post_approval_count'])
             ->keyBy('user_id');
 
@@ -111,30 +112,21 @@ trait SyncsUserCounts
         foreach ($groups as $key => $ids) {
             [$discussionCount, $postCount] = array_map('intval', explode(':', $key));
 
-            $this->db->table('user_first_post_approval')
-                ->whereIn('user_id', $ids)
-                ->update([
+            $insertData = [];
+            foreach ($ids as $userId) {
+                $insertData[] = [
+                    'user_id' => $userId,
                     'first_discussion_approval_count' => $discussionCount,
                     'first_post_approval_count' => $postCount,
-                ]);
-
-            $existingIds = $this->db->table('user_first_post_approval')
-                ->whereIn('user_id', $ids)
-                ->pluck('user_id')
-                ->toArray();
-
-            $missingIds = array_diff($ids, $existingIds);
-            if (!empty($missingIds)) {
-                $insertData = [];
-                foreach ($missingIds as $userId) {
-                    $insertData[] = [
-                        'user_id' => $userId,
-                        'first_discussion_approval_count' => $discussionCount,
-                        'first_post_approval_count' => $postCount,
-                    ];
-                }
-                $this->db->table('user_first_post_approval')->insert($insertData);
+                ];
             }
+
+            // upsert garantisce atomicità ed evita il pattern UPDATE -> SELECT -> INSERT
+            UserFirstPostApproval::upsert(
+                $insertData,
+                ['user_id'],
+                ['first_discussion_approval_count', 'first_post_approval_count']
+            );
         }
     }
 
@@ -176,35 +168,24 @@ trait SyncsUserCounts
         foreach ($groups as $key => $ids) {
             [$discInc, $postInc] = array_map('intval', explode(':', $key));
 
-            if ($discInc > 0) {
-                $this->db->table('user_first_post_approval')
-                    ->whereIn('user_id', $ids)
-                    ->increment('first_discussion_approval_count', $discInc);
-            }
-            
-            if ($postInc > 0) {
-                $this->db->table('user_first_post_approval')
-                    ->whereIn('user_id', $ids)
-                    ->increment('first_post_approval_count', $postInc);
+            $insertData = [];
+            foreach ($ids as $userId) {
+                $insertData[] = [
+                    'user_id' => $userId,
+                    'first_discussion_approval_count' => $discInc,
+                    'first_post_approval_count' => $postInc,
+                ];
             }
 
-            $existingIds = $this->db->table('user_first_post_approval')
-                ->whereIn('user_id', $ids)
-                ->pluck('user_id')
-                ->toArray();
-
-            $missingIds = array_diff($ids, $existingIds);
-            if (!empty($missingIds)) {
-                $insertData = [];
-                foreach ($missingIds as $userId) {
-                    $insertData[] = [
-                        'user_id' => $userId,
-                        'first_discussion_approval_count' => $discInc,
-                        'first_post_approval_count' => $postInc,
-                    ];
-                }
-                $this->db->table('user_first_post_approval')->insert($insertData);
-            }
+            // upsert con DB::raw per incrementare in modo atomico
+            UserFirstPostApproval::upsert(
+                $insertData,
+                ['user_id'],
+                [
+                    'first_discussion_approval_count' => DB::raw('first_discussion_approval_count + ' . $discInc),
+                    'first_post_approval_count' => DB::raw('first_post_approval_count + ' . $postInc),
+                ]
+            );
         }
     }
 }
