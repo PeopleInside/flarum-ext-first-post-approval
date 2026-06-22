@@ -1,37 +1,40 @@
 <?php
 
+use Flarum\Database\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Builder;
 
+// Utilizzo dell'helper di Flarum per la creazione dello schema
+$migration = Migration::createTable('user_first_post_approval', function (Blueprint $table) {
+    $table->unsignedInteger('user_id')->primary();
+    $table->unsignedInteger('first_post_approval_count')->default(0);
+    $table->unsignedInteger('first_discussion_approval_count')->default(0);
+
+    $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+});
+
+$originalUp = $migration['up'];
+$originalDown = $migration['down'];
+
 return [
-    'up' => function (Builder $schema) {
-        $prefix = $schema->getConnection()->getTablePrefix();
-        $connection = $schema->getConnection();
-
-        // Crea la tabella solo se non esiste già
-        if (!$schema->hasTable('user_first_post_approval')) {
-            $schema->create('user_first_post_approval', function (Blueprint $table) {
-                $table->unsignedInteger('user_id')->primary();
-                $table->unsignedInteger('first_post_approval_count')->default(0);
-                $table->unsignedInteger('first_discussion_approval_count')->default(0);
-                
-                $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            });
-        }
-
-        // Migra i dati solo se le colonne esistono ancora nella tabella users
+    'up' => function (Builder $schema) use ($originalUp) {
+        // Esegue la creazione della tabella
+        $originalUp($schema);
+        
+        // Migrazione dei dati esistente: usa il query builder per gestire i prefissi in modo sicuro
         if ($schema->hasColumn('users', 'first_post_approval_count')) {
-            // Svuota la tabella di destinazione per evitare duplicati in caso di re-run
+            $connection = $schema->getConnection();
             $connection->table('user_first_post_approval')->truncate();
-
-            $connection->statement('
-                INSERT INTO ' . $prefix . 'user_first_post_approval 
-                    (user_id, first_post_approval_count, first_discussion_approval_count)
-                SELECT id, first_post_approval_count, first_discussion_approval_count
-                FROM ' . $prefix . 'users
-                WHERE first_post_approval_count > 0 OR first_discussion_approval_count > 0
-            ');
             
+            $connection->table('user_first_post_approval')
+                ->insertUsing(
+                    ['user_id', 'first_post_approval_count', 'first_discussion_approval_count'],
+                    $connection->table('users')
+                        ->select('id', 'first_post_approval_count', 'first_discussion_approval_count')
+                        ->where('first_post_approval_count', '>', 0)
+                        ->orWhere('first_discussion_approval_count', '>', 0)
+                );
+
             $schema->table('users', function (Blueprint $table) {
                 $table->dropColumn([
                     'first_post_approval_count',
@@ -40,11 +43,7 @@ return [
             });
         }
     },
-    'down' => function (Builder $schema) {
-        $prefix = $schema->getConnection()->getTablePrefix();
-        $connection = $schema->getConnection();
-
-        // Ricrea le colonne nella tabella users solo se non esistono già
+    'down' => function (Builder $schema) use ($originalDown) {
         if (!$schema->hasColumn('users', 'first_post_approval_count')) {
             $schema->table('users', function (Blueprint $table) {
                 $table->unsignedInteger('first_post_approval_count')->default(0);
@@ -52,10 +51,10 @@ return [
             });
         }
 
-        // Riporta i dati solo se la tabella companion esiste
         if ($schema->hasTable('user_first_post_approval')) {
+            $connection = $schema->getConnection();
             $approvals = $connection->table('user_first_post_approval')->get();
-            
+
             foreach ($approvals as $approval) {
                 $connection->table('users')
                     ->where('id', $approval->user_id)
@@ -64,8 +63,9 @@ return [
                         'first_discussion_approval_count' => $approval->first_discussion_approval_count,
                     ]);
             }
-
-            $schema->dropIfExists('user_first_post_approval');
         }
+        
+        // Esegue la rimozione della tabella
+        $originalDown($schema);
     }
 ];
