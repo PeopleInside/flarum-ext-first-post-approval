@@ -2,7 +2,7 @@
 
 namespace PeopleInside\FirstPostApproval\Listeners;
 
-use Flarum\Post\Event\PostWasApproved;
+use Flarum\Approval\Event\PostWasApproved; // ← CORRETTO: era Flarum\Post\Event\PostWasApproved
 use Illuminate\Support\Facades\DB;
 use PeopleInside\FirstPostApproval\Models\UserFirstPostApproval;
 
