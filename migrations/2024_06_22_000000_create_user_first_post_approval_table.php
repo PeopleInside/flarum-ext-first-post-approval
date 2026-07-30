@@ -53,40 +53,18 @@ return [
 
         if ($schema->hasTable('user_first_post_approval')) {
             $connection = $schema->getConnection();
-            $driver = $connection->getDriverName();
-            $prefix = $connection->getTablePrefix();
-            $usersTable = $prefix . 'users';
-            $approvalTable = $prefix . 'user_first_post_approval';
-
-            if ($driver === 'mysql' || $driver === 'mariadb') {
-                $connection->statement("
-                    UPDATE {$usersTable} u
-                    JOIN {$approvalTable} a ON u.id = a.user_id
-                    SET u.first_post_approval_count = a.first_post_approval_count,
-                        u.first_discussion_approval_count = a.first_discussion_approval_count
-                ");
-            } elseif ($driver === 'pgsql' || $driver === 'sqlite') {
-                $connection->statement("
-                    UPDATE {$usersTable}
-                    SET first_post_approval_count = a.first_post_approval_count,
-                        first_discussion_approval_count = a.first_discussion_approval_count
-                    FROM {$approvalTable} a
-                    WHERE {$usersTable}.id = a.user_id
-                ");
-            } else {
-                $connection->table('user_first_post_approval')
-                    ->orderBy('user_id')
-                    ->chunk(500, function ($approvals) use ($connection) {
-                        foreach ($approvals as $approval) {
-                            $connection->table('users')
-                                ->where('id', $approval->user_id)
-                                ->update([
-                                    'first_post_approval_count' => $approval->first_post_approval_count,
-                                    'first_discussion_approval_count' => $approval->first_discussion_approval_count,
-                                ]);
-                        }
-                    });
-            }
+            $connection->table('user_first_post_approval')
+                ->orderBy('user_id')
+                ->chunk(500, function ($approvals) use ($connection) {
+                    foreach ($approvals as $approval) {
+                        $connection->table('users')
+                            ->where('id', $approval->user_id)
+                            ->update([
+                                'first_post_approval_count' => $approval->first_post_approval_count,
+                                'first_discussion_approval_count' => $approval->first_discussion_approval_count,
+                            ]);
+                    }
+                });
         }
         
         // Esegue la rimozione della tabella
