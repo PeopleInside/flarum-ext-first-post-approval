@@ -64,7 +64,7 @@ trait SyncsUserCounts
         UserFirstPostApproval::upsert(
             [['user_id' => $post->user->id, $column => 1]],
             ['user_id'],
-            [$column => UserFirstPostApproval::query()->raw("`$column` + 1")]
+            [$column => UserFirstPostApproval::query()->raw($column . ' + 1')]
         );
     }
 
